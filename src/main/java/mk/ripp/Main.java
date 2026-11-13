@@ -1,18 +1,27 @@
 package mk.ripp;
 
-import mk.ripp.file.FileMetadata;
 import mk.ripp.file.FileSplitter;
+import mk.ripp.rip.RipCreator;
+import mk.ripp.store.RipStore;
+import mk.ripp.tracker.TrackerClient;
+
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Path;
-import java.util.Base64;
+import java.util.UUID;
 
 public class Main {
-    public static void main(String[] args) throws IOException {
-        FileSplitter splitter = new FileSplitter();
-        FileMetadata metadata = splitter.createMetadata(Path.of("C:/Users/nikol/Desktop/SpremiTenderFinal.mp4"));
-        System.out.println("File name " + metadata.getFileName());
-        System.out.println("Size " + metadata.getFileSize());
-        System.out.println("Chunk size " + metadata.getChunkSize());
-        System.out.println("Hash " + Base64.getEncoder().encode(metadata.getChunkHashes().getFirst().getBytes()));
+    public static void main(String[] args) throws IOException, InterruptedException {
+        if (args.length != 1) {
+            System.err.println("Usage: Main <file>");
+            return;
+        }
+        Path file = Path.of(args[0]);
+        try (RipStore rips = new RipStore(Path.of("data", "ripp.db"))) {
+            TrackerClient client = new TrackerClient(URI.create("http://localhost:7070"));
+            RipCreator creator = new RipCreator(new FileSplitter(), client, rips);
+            UUID id = creator.create(file);
+            System.out.println(id);
+        }
     }
 }
