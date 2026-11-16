@@ -13,9 +13,10 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
-public final class RipStore implements AutoCloseable {
+public final class SeedingRipStore implements AutoCloseable {
     public static final int HASH_LENGTH = 32;
 
     private static final String CREATE_TABLE = """
@@ -31,7 +32,7 @@ public final class RipStore implements AutoCloseable {
 
     private final Connection connection;
 
-    public RipStore(Path dbFile) {
+    public SeedingRipStore(Path dbFile) {
         try {
             Files.createDirectories(dbFile.getParent());
             connection = DriverManager.getConnection("jdbc:sqlite:" + dbFile.toAbsolutePath());
@@ -63,6 +64,25 @@ public final class RipStore implements AutoCloseable {
         }
     }
 
+    public synchronized Optional<SeededRip> find(UUID id) {
+        String sql = "SELECT file_path, chunk_size FROM rips WHERE id = ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, id.toString());
+            try (ResultSet row = statement.executeQuery()) {
+                if (!row.next()) {
+                    return Optional.empty();
+                }
+                return Optional.of(new SeededRip(
+                        id,
+                        Path.of(row.getString("file_path")),
+                        row.getInt("chunk_size")
+                ));
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Could not read rip " + id, e);
+        }
+    }
+
     public synchronized List<UUID> ids() {
         String sql = "SELECT id FROM rips ORDER BY rowid";
         try (Statement statement = connection.createStatement();
@@ -85,6 +105,8 @@ public final class RipStore implements AutoCloseable {
             throw new IllegalStateException("Could not close rip database", e);
         }
     }
+
+    public record SeededRip(UUID id, Path file, int chunkSize) {}
 
     private static byte[] pack(List<FileChunkHash> hashes) {
         byte[] packed = new byte[hashes.size() * HASH_LENGTH];

@@ -1,4 +1,4 @@
-package mk.ripp.peer;
+package mk.ripp.peer.downloader;
 
 import dev.onvoid.webrtc.RTCDataChannel;
 import dev.onvoid.webrtc.RTCDataChannelBuffer;
@@ -6,6 +6,8 @@ import dev.onvoid.webrtc.RTCDataChannelInit;
 import dev.onvoid.webrtc.RTCDataChannelObserver;
 import dev.onvoid.webrtc.RTCDataChannelState;
 import dev.onvoid.webrtc.RTCSdpType;
+import mk.ripp.peer.PeerChannel;
+import mk.ripp.peer.Rtc;
 import mk.ripp.tracker.TrackerSocket;
 import java.util.Map;
 import java.util.UUID;

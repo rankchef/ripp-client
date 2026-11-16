@@ -5,13 +5,12 @@ import mk.ripp.file.model.FileChunkHash;
 import mk.ripp.file.model.FileMetadata;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
+import java.io.RandomAccessFile;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class FileSplitter {
@@ -25,16 +24,13 @@ public class FileSplitter {
     public FileMetadata createMetadata(Path filePath, int chunkSize) throws IOException {
         List<FileChunkHash> hashes = new ArrayList<>();
 
-        try (FileChannel channel = FileChannel.open(filePath, StandardOpenOption.READ)) {
-            long fileSize = channel.size();
-            ByteBuffer buffer = ByteBuffer.allocate(chunkSize);
-
-            while (channel.read(buffer) > 0) {
-                buffer.flip();
-                byte[] chunkData = new byte[buffer.remaining()];
-                buffer.get(chunkData);
+        try (RandomAccessFile file = new RandomAccessFile(filePath.toFile(), "r")) {
+            long fileSize = file.length();
+            byte[] buffer = new byte[chunkSize];
+            int read;
+            while ((read = file.read(buffer)) > 0) {
+                byte[] chunkData = read == buffer.length ? buffer : Arrays.copyOf(buffer, read);
                 hashes.add(digest(chunkData));
-                buffer.clear();
             }
 
             String fileName = filePath.getFileName().toString();
@@ -43,19 +39,19 @@ public class FileSplitter {
     }
 
     public FileChunk readChunk(Path filePath, int chunkIndex, int chunkSize) throws IOException {
-        try (FileChannel channel = FileChannel.open(filePath, StandardOpenOption.READ)) {
+        try (RandomAccessFile file = new RandomAccessFile(filePath.toFile(), "r")) {
             long position = (long) chunkIndex * chunkSize;
-            long fileSize = channel.size();
+            long fileSize = file.length();
 
             if (position >= fileSize) {
                 throw new IndexOutOfBoundsException("Chunk index out of bounds: " + chunkIndex);
             }
 
             int length = (int) Math.min(chunkSize, fileSize - position);
-            ByteBuffer buffer = ByteBuffer.allocate(length);
-            channel.read(buffer, position);
-
-            return new FileChunk(chunkIndex, buffer.array());
+            byte[] data = new byte[length];
+            file.seek(position);
+            file.readFully(data);
+            return new FileChunk(chunkIndex, data);
         }
     }
 

@@ -3,7 +3,7 @@ package mk.ripp.rip;
 import mk.ripp.file.FileSplitter;
 import mk.ripp.file.model.FileChunkHash;
 import mk.ripp.file.model.FileMetadata;
-import mk.ripp.store.RipStore;
+import mk.ripp.store.SeedingRipStore;
 import mk.ripp.tracker.TrackerClient;
 
 import java.io.IOException;
@@ -16,9 +16,9 @@ public class RipCreator {
 
     private final FileSplitter files;
     private final TrackerClient tracker;
-    private final RipStore rips;
+    private final SeedingRipStore rips;
 
-    public RipCreator(FileSplitter files, TrackerClient tracker, RipStore rips) {
+    public RipCreator(FileSplitter files, TrackerClient tracker, SeedingRipStore rips) {
         this.files = files;
         this.tracker = tracker;
         this.rips = rips;
@@ -52,9 +52,9 @@ public class RipCreator {
             throw new IllegalArgumentException("chunkHashes must contain " + expected + " hashes");
         }
         for (int i = 0; i < hashes.size(); i++) {
-            if (hashes.get(i).getBytes().length != RipStore.HASH_LENGTH) {
+            if (hashes.get(i).getBytes().length != SeedingRipStore.HASH_LENGTH) {
                 throw new IllegalArgumentException(
-                        "chunkHashes[" + i + "] must be " + RipStore.HASH_LENGTH + " bytes");
+                        "chunkHashes[" + i + "] must be " + SeedingRipStore.HASH_LENGTH + " bytes");
             }
         }
     }

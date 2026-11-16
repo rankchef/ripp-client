@@ -1,7 +1,9 @@
-package mk.ripp.peer;
+package mk.ripp.peer.seeder;
 
 import dev.onvoid.webrtc.RTCDataChannel;
 import dev.onvoid.webrtc.RTCSdpType;
+import mk.ripp.peer.PeerChannel;
+import mk.ripp.peer.Rtc;
 import mk.ripp.tracker.TrackerSocket;
 import mk.ripp.tracker.model.IncomingOffer;
 

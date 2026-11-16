@@ -23,13 +23,15 @@ public class TrackerSocket implements WebSocket.Listener {
     private final ObjectMapper json = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     private final StringBuilder incoming = new StringBuilder();
+    private final HttpClient http = HttpClient.newHttpClient();
     private final URI wsUri;
     private volatile WebSocket socket;
     private volatile Consumer<IncomingOffer> offers;
     private volatile Consumer<IncomingAnswer> answers;
 
     public TrackerSocket(URI baseUri) {
-        this.wsUri = URI.create(baseUri.toString().replaceFirst("^http", "ws") + "/ws");
+        String scheme = "https".equals(baseUri.getScheme()) ? "wss" : "ws";
+        this.wsUri = URI.create(scheme + "://" + baseUri.getRawAuthority() + "/ws");
     }
 
     public void onOffer(Consumer<IncomingOffer> offers) {
@@ -41,10 +43,19 @@ public class TrackerSocket implements WebSocket.Listener {
     }
 
     public void connect() throws InterruptedException, ExecutionException {
-        HttpClient.newHttpClient()
-                .newWebSocketBuilder()
+        http.newWebSocketBuilder()
                 .buildAsync(wsUri, this)
                 .get();
+    }
+
+    public void close() {
+        offers = ignored -> {};
+        answers = ignored -> {};
+        WebSocket webSocket = socket;
+        socket = null;
+        if (webSocket != null) {
+            webSocket.abort();
+        }
     }
 
     public void announce(List<UUID> rips) {

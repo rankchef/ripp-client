@@ -16,10 +16,39 @@ import java.util.UUID;
 public class TrackerClient {
     private final HttpClient http = HttpClient.newHttpClient();
     private final ObjectMapper json = new ObjectMapper();
+    private final URI baseUri;
     private final URI createUri;
 
     public TrackerClient(URI baseUri) {
+        this.baseUri = baseUri;
         this.createUri = baseUri.resolve("/rips/create");
+    }
+
+    public FileMetadata metadata(UUID id) throws IOException, InterruptedException {
+        HttpResponse<byte[]> response = get("/rips/" + id);
+        if (response.statusCode() != 200) {
+            throw new IOException("Rip metadata failed: " + response.statusCode() + " " + body(response));
+        }
+        CreatedRip rip = json.readValue(response.body(), CreatedRip.class);
+        List<FileChunkHash> hashes = rip.chunkHashes().stream().map(FileChunkHash::new).toList();
+        return new FileMetadata(rip.fileName(), rip.fileSize(), rip.chunkSize(), hashes);
+    }
+
+    public List<UUID> seeders(UUID id) throws IOException, InterruptedException {
+        HttpResponse<byte[]> response = get("/rips/" + id + "/seeders");
+        if (response.statusCode() != 200) {
+            throw new IOException("Seeders failed: " + response.statusCode() + " " + body(response));
+        }
+        return List.of(json.readValue(response.body(), UUID[].class));
+    }
+
+    private HttpResponse<byte[]> get(String path) throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder(baseUri.resolve(path)).GET().build();
+        return http.send(request, HttpResponse.BodyHandlers.ofByteArray());
+    }
+
+    private static String body(HttpResponse<byte[]> response) {
+        return new String(response.body(), StandardCharsets.UTF_8);
     }
 
     public UUID create(FileMetadata metadata) throws IOException, InterruptedException {

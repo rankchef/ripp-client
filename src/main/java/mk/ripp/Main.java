@@ -1,96 +1,116 @@
 package mk.ripp;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import mk.ripp.file.FileSplitter;
-import mk.ripp.peer.PeerAcceptor;
-import mk.ripp.peer.PeerConnector;
 import mk.ripp.peer.Rtc;
+import mk.ripp.peer.downloader.Downloader;
+import mk.ripp.peer.seeder.PeerAcceptor;
+import mk.ripp.peer.seeder.RipDataSource;
+import mk.ripp.peer.seeder.Seeder;
 import mk.ripp.rip.RipCreator;
-import mk.ripp.store.RipStore;
+import mk.ripp.store.DownloadingRipStore;
+import mk.ripp.store.SeedingRipStore;
 import mk.ripp.tracker.TrackerClient;
 import mk.ripp.tracker.TrackerSocket;
 
-import java.io.IOException;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 
 public class Main {
-    private static final URI TRACKER = URI.create("http://localhost:7070");
+    private static final URI TRACKER = URI.create("http://34.118.24.236:7070/");
 
     public static void main(String[] args) throws Exception {
-        Share share = seeder();
-        downloader(share);
-    }
-
-    public static Share seeder() throws IOException, InterruptedException, ExecutionException {
         Path desktop = Path.of(System.getProperty("user.home"), "Desktop");
-        Path file = desktop.resolve("ripp-demo.txt");
-        if (!Files.exists(file)) {
-            Files.writeString(file, "hello from ripp seeder\n");
+        Rtc rtc = new Rtc();
+        Scanner in = new Scanner(System.in);
+        if (args.length > 0) {
+            run(args[0], desktop, rtc, in);
+            return;
         }
+        while (true) {
+            System.out.println("1 seed");
+            System.out.println("2 download");
+            System.out.println("3 quit");
+            System.out.print("> ");
+            String choice = in.nextLine().trim();
+            if (choice.equals("3") || choice.equalsIgnoreCase("quit")) {
+                return;
+            }
+            run(choice, desktop, rtc, in);
+        }
+    }
 
-        RipStore rips = new RipStore(Path.of("data", "seeder.db"));
+    private static void run(String choice, Path desktop, Rtc rtc, Scanner in) throws Exception {
+        if (choice.equals("1") || choice.equalsIgnoreCase("seed")) {
+            seed(Path.of(System.getProperty("user.home"), "Downloads"), rtc, in);
+        } else if (choice.equals("2") || choice.equalsIgnoreCase("download")) {
+            download(desktop, rtc, in);
+        } else {
+            System.out.println("Choose 1 or 2");
+        }
+    }
+
+    private static void seed(Path downloads, Rtc rtc, Scanner in) throws Exception {
+        List<Path> files = files(downloads);
+        if (files.isEmpty()) {
+            System.out.println("No files in " + downloads);
+            return;
+        }
+        for (int i = 0; i < files.size(); i++) {
+            System.out.println(i + " " + files.get(i).getFileName());
+        }
+        System.out.print("file number> ");
+        int index = Integer.parseInt(in.nextLine().trim());
+        Path file = files.get(index);
+
+        SeedingRipStore seeding = new SeedingRipStore(Path.of("data", "seeder.db"));
         TrackerClient client = new TrackerClient(TRACKER);
-        RipCreator creator = new RipCreator(new FileSplitter(), client, rips);
-        UUID ripId = creator.create(file);
-        System.out.println("Seeder: created rip " + ripId + " from " + file);
+        UUID ripId = new RipCreator(new FileSplitter(), client, seeding).create(file);
+        System.out.println("Created rip " + ripId);
 
         TrackerSocket socket = new TrackerSocket(TRACKER);
-        Rtc rtc = new Rtc();
-        new PeerAcceptor(socket, rtc, peer ->
-                System.out.println("Seeder: peer " + peer.peerId()
-                        + " connected for rip " + peer.ripId()));
+        Seeder seeder = new Seeder(new RipDataSource(seeding, new FileSplitter()));
+        new PeerAcceptor(socket, rtc, peer -> {
+            System.out.println("Peer " + peer.peerId() + " connected for " + peer.ripId());
+            seeder.serve(peer);
+        });
         socket.connect();
-        socket.announce(List.of(ripId));
-        System.out.println("Seeder: announced rip " + ripId);
-
-        UUID seederId = ownSeederId(ripId);
-        System.out.println("Seeder: peer id " + seederId);
-        return new Share(seederId, ripId, socket, rtc, rips);
+        socket.announce(seeding.ids());
+        System.out.println("Seeding " + file.getFileName() + ". Press enter to stop.");
+        in.nextLine();
+        socket.close();
+        seeding.close();
     }
 
-    public static void downloader(Share share) throws InterruptedException, ExecutionException {
+    private static void download(Path desktop, Rtc rtc, Scanner in) throws Exception {
+        System.out.print("rip id> ");
+        UUID ripId = UUID.fromString(in.nextLine().trim());
+
+        SeedingRipStore seeding = new SeedingRipStore(Path.of("data", "downloader-seeding.db"));
+        DownloadingRipStore downloads = new DownloadingRipStore(Path.of("data", "downloads.db"));
+        TrackerClient client = new TrackerClient(TRACKER);
         TrackerSocket socket = new TrackerSocket(TRACKER);
-        Rtc rtc = new Rtc();
-        PeerConnector connector = new PeerConnector(socket, rtc);
+        Downloader downloader = new Downloader(client, socket, rtc, downloads, seeding);
         socket.connect();
-        System.out.println("Downloader: connecting to seeder " + share.seederId()
-                + " for rip " + share.ripId());
 
-        connector.connect(share.seederId(), share.ripId())
-                .whenComplete((peer, error) -> {
-                    if (error != null) {
-                        System.err.println("Downloader: connect failed: " + error.getMessage());
-                        return;
-                    }
-                    System.out.println("Downloader: connected to " + peer.peerId()
-                            + " for rip " + peer.ripId());
-                })
-                .join();
+        System.out.println("Downloading " + ripId);
+        downloader.download(ripId, desktop);
+        System.out.println("Finished " + ripId + ". Press enter to stop.");
+        in.nextLine();
+        socket.close();
+        seeding.close();
+        downloads.close();
     }
 
-    private static UUID ownSeederId(UUID ripId) throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder(TRACKER.resolve("/rips/" + ripId + "/seeders"))
-                .GET()
-                .build();
-        HttpResponse<String> response = HttpClient.newHttpClient()
-                .send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() != 200) {
-            throw new IOException("Could not list seeders: " + response.statusCode() + " " + response.body());
+    private static List<Path> files(Path desktop) throws Exception {
+        List<Path> files = new ArrayList<>();
+        try (var listing = Files.list(desktop)) {
+            listing.filter(Files::isRegularFile).sorted().forEach(files::add);
         }
-        UUID[] seeders = new ObjectMapper().readValue(response.body(), UUID[].class);
-        if (seeders.length == 0) {
-            throw new IllegalStateException("No seeders announced for rip " + ripId);
-        }
-        return seeders[0];
+        return files;
     }
-
-    public record Share(UUID seederId, UUID ripId, TrackerSocket socket, Rtc rtc, RipStore rips) {}
 }

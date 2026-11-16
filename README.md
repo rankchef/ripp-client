@@ -34,4 +34,4 @@ Each attempt waits up to 30 seconds. If the answer or the data channel never arr
 | `mk.ripp.tracker` | HTTP create call, and the WebSocket for announce / offer / answer |
 | `mk.ripp.peer` | WebRTC connections, seeding, and downloading |
 
-The client is a Java 24 Maven project. It uses Jackson for JSON, SQLite for the local rip list, and [webrtc-java](https://github.com/devopvoid/webrtc-java) for peer connections. Point it at a running [ripp-server](https://github.com/rankchef/ripp-server); `Main` expects the tracker at `http://localhost:7070`.
+The client is a Java 24 Maven project. It uses Jackson for JSON, SQLite for the local rip list, and [webrtc-java](https://github.com/devopvoid/webrtc-java) for peer connections. Point it at a running [ripp-server](https://github.com/rankchef/ripp-server); `Main` expects the tracker at `http://34.118.24.236:7070/`.
