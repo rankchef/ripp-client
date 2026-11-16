@@ -1,8 +1,8 @@
 package mk.ripp.file;
 
-import mk.ripp.file.FileChunk;
-import mk.ripp.file.FileChunkHash;
-import mk.ripp.file.FileMetadata;
+import mk.ripp.file.model.FileChunk;
+import mk.ripp.file.model.FileChunkHash;
+import mk.ripp.file.model.FileMetadata;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

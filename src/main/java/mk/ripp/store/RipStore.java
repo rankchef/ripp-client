@@ -1,7 +1,7 @@
 package mk.ripp.store;
 
-import mk.ripp.file.FileChunkHash;
-import mk.ripp.file.FileMetadata;
+import mk.ripp.file.model.FileChunkHash;
+import mk.ripp.file.model.FileMetadata;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

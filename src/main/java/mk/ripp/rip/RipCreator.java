@@ -1,8 +1,8 @@
 package mk.ripp.rip;
 
-import mk.ripp.file.FileChunkHash;
-import mk.ripp.file.FileMetadata;
 import mk.ripp.file.FileSplitter;
+import mk.ripp.file.model.FileChunkHash;
+import mk.ripp.file.model.FileMetadata;
 import mk.ripp.store.RipStore;
 import mk.ripp.tracker.TrackerClient;
 

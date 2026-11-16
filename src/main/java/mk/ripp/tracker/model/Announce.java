@@ -1,4 +1,4 @@
-package mk.ripp.tracker;
+package mk.ripp.tracker.model;
 
 import java.util.List;
 import java.util.UUID;

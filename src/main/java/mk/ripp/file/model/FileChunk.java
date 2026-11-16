@@ -1,4 +1,4 @@
-package mk.ripp.file;
+package mk.ripp.file.model;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

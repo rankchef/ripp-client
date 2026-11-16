@@ -25,6 +25,11 @@
             <artifactId>sqlite-jdbc</artifactId>
             <version>3.54.1.0</version>
         </dependency>
+        <dependency>
+            <groupId>dev.onvoid.webrtc</groupId>
+            <artifactId>webrtc-java</artifactId>
+            <version>1.0.1</version>
+        </dependency>
     </dependencies>
 
 </project>

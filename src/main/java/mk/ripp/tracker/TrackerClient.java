@@ -1,8 +1,8 @@
 package mk.ripp.tracker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import mk.ripp.file.FileChunkHash;
-import mk.ripp.file.FileMetadata;
+import mk.ripp.file.model.FileChunkHash;
+import mk.ripp.file.model.FileMetadata;
 
 import java.io.IOException;
 import java.net.URI;
