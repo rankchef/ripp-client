@@ -40,7 +40,7 @@ public final class PeerAcceptor {
         arrived.orTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS).whenComplete((channel, error) -> {
             if (error != null) {
                 connection.close();
-                System.err.println("Could not connect to " + offer.from() + ": " + error.getMessage());
+                System.err.println("Could not connect to " + offer.from() + ": " + Rtc.failure(error));
                 return;
             }
             uploads.accept(new PeerChannel(offer.from(), offer.ripId(), channel, connection.pc()));

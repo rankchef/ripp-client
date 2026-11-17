@@ -67,6 +67,7 @@ public final class PeerConnector {
         result.orTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS).whenComplete((open, error) -> {
             pending.remove(seederId, request);
             if (error != null) {
+                System.err.println("Could not connect to " + seederId + ": " + Rtc.failure(error));
                 channel.close();
                 channel.dispose();
                 connection.close();
